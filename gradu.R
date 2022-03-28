@@ -1,6 +1,19 @@
-if (!require('tidyverse')) install.packages('tidyverse'); library('tidyverse')
-# if (!require('cowplot')) install.packages('cowplot'); library('cowplot')
+# R-code for the Master's thesis of Julius Lehtinen
 
+# The main part of the code of the model is organised into three nested loops. 
+# Innermost loop controls the individual legislative acts and their approval, and repeats the number of
+# times that there are legislative acts in the parliamentary term. Second-innermost aggregates the acts
+# and controls one simulation with many parliamentary terms, with a certain fraction of independent
+# randomised legislators, and repeats as many times there are parliamentary terms in one simulation.
+# The outermost loop aggregates the simulations with a given fraction of independents into a data frame,
+# and runs ten times, for each 0.1 increment of independent legislators.
+
+# Installing and loading libraries needed for the code
+# install.packages("tidyverse")
+# Sys.sleep(3)
+library("tidyverse")
+
+# Defining few functions needed in the code 
 randp <- function(n = 1, r = 1) {
   if (n < 1 || r < 0) return(c())
   x <- rnorm(n)
@@ -18,21 +31,16 @@ rand2 <- function(n, r) {
   return(U)
 }
 
-sumfun<-function(x,start,end){
+sumfun <- function(x,start,end){
   return(sum(x[start:end]))
 }
 
-independents_df <- as.data.frame(c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1))
-names(independents_df) <- c("frac")
-independents_df
-
-# seed <- sample(1:1000,1)
-seed <- 197
-
-lower_bound_party_reps <- -0.9
-n_simulations <- 100
+# Defining variables used in the model and setting seed for reproducibility
+n_simulations <- 1000
 n_acts <- 1000
-rad <- 0.1
+rad <- 0.1 # Circle of tolerance of political parties
+lower_bound_party_reps <- -0.9 # lower bound of values taken by the party-affiliated legislators in the Cipolla diagram
+
 fraction_a <- 40/200
 fraction_b <- 30/200
 fraction_c <- 20/200
@@ -43,20 +51,32 @@ fraction_g <- 40/200
 fraction_h <- 5/200
 original_parliament <- 200
 
+seed <- 197
+set.seed(seed)
+
+independents_df <- as.data.frame(c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1)) # fractions of independent legislators
+names(independents_df) <- c("frac")
+
+totaldf <- NULL
 finaldist <- NULL
 
-set.seed(seed)
+# Loops
 for (i in 1:length(independents_df$frac)) {
+  
+  # The third-innermost loop controlling all the simulations of fractions of independent legislators
   
   fraction_ind <- independents_df$frac[i]
   n <- original_parliament - (fraction_ind*original_parliament)
+  dist = NULL
   
-  dist <- NULL
-  pb <- txtProgressBar(min = 0, max = n_simulations, initial = 0, style=3, width=50)
+  pb <- txtProgressBar(min = 0, max = n_simulations, initial = 0, style=3, width=50) # Progress bar for running the simulation
   stepi <- 0
   
   for (i in 1:n_simulations){
     
+    # The second-innermost loop controlling individual simulation, aggregating the legislative acts
+    
+    ## Generating the parties and their legislators, loop for each
     party_a <- NULL
     if (fraction_a>0 & n > 0) {
       circle_a <- as.data.frame(randp(fraction_a*n,rad))
@@ -99,7 +119,6 @@ for (i in 1:length(independents_df$frac)) {
       }
       party_a$party <- "a"
     }
-    party_a
     
     party_b <- NULL
     if (fraction_b>0 & n > 0) {
@@ -142,7 +161,6 @@ for (i in 1:length(independents_df$frac)) {
       }
       party_b$party <- "b"
     }
-    party_b
     
     party_c <- NULL
     if (fraction_c>0 & n > 0) {
@@ -185,7 +203,6 @@ for (i in 1:length(independents_df$frac)) {
       }
       party_c$party <- "c"
     }
-    party_c
     
     party_d <- NULL
     if (fraction_d>0 & n > 0) {
@@ -228,7 +245,6 @@ for (i in 1:length(independents_df$frac)) {
       }
       party_d$party <- "d"
     }
-    party_d
     
     party_e <- NULL
     if (fraction_e>0 & n > 0) {
@@ -272,7 +288,6 @@ for (i in 1:length(independents_df$frac)) {
       }
       party_e$party <- "e"
     }
-    party_e
     
     party_f <- NULL
     if (fraction_f>0 & n > 0) {
@@ -316,7 +331,6 @@ for (i in 1:length(independents_df$frac)) {
       }
       party_f$party <- "f"
     }
-    party_f
     
     party_g <- NULL
     if (fraction_g>0 & n > 0) {
@@ -359,7 +373,6 @@ for (i in 1:length(independents_df$frac)) {
       }
       party_g$party <- "g"
     }
-    party_g
     
     party_h <- NULL
     if (fraction_h>0 & n > 0) {
@@ -405,7 +418,6 @@ for (i in 1:length(independents_df$frac)) {
         party_h$party <- "h"
       }
     }
-    party_h
     
     ind <- NULL
     if (fraction_ind > 0) {
@@ -431,23 +443,27 @@ for (i in 1:length(independents_df$frac)) {
       ind <- data.frame(x,y)
       ind$party <- "ind"
     }
-    ind
     
     partycircles <- bind_rows(partycircle_a, partycircle_b, partycircle_c, partycircle_d,
                               partycircle_e, partycircle_f, partycircle_g, partycircle_h)
     
-    parliament <- bind_rows(party_a, party_b, party_c, party_d, party_e, party_f, party_g, party_h)
+    parliament <- bind_rows(party_a, party_b, party_c, party_d, party_e, party_f, party_g, party_h) # Binding the party-legislators to a data frame to have a parliament
     
     if (fraction_ind > 0) {
-      parliament <- bind_rows(parliament, ind)
+    # Binding the independents too if their fraction is above 0
+        parliament <- bind_rows(parliament, ind)
     }
     
-    acts <- parliament[sample(1:original_parliament, n_acts, replace = T),c(1:3)]
+    acts <- parliament[sample(1:original_parliament, n_acts, replace = T),c(1:3)] # Extracting the positions of n legislative acts from the parliament
+
     votesdist <- NULL
     for(i in 1:n_acts) {
       
-      parliament$x2 <- runif(length(parliament$x), -1,1)
+      # The innermost loop controlling individual legislative acts during a parliamentary term
       
+      parliament$x2 <- runif(length(parliament$x), -1,1) # Extracting a voting point for each parliamentarian for each legislative act
+      
+      # Determining which legislators votes for the act
       parliament$supporting <- case_when(
         (acts$party[i] == parliament$party & parliament$party != "ind") ~ 1,
         (acts$party[i] == "a" & (parliament$party == "b" | parliament$party == "c"| parliament$party == "d"| parliament$party == "e") ~ 1),
@@ -472,8 +488,11 @@ for (i in 1:length(independents_df$frac)) {
       votestemp <- sum(parliament$supporting)
       votesdist <- rbind(votesdist, votestemp)
     }
+    
     acts$total <- votesdist
-    acts$passed <- acts$total > original_parliament/2
+    acts$passed <- acts$total > original_parliament/2 # Act passes if over a half of the legislators votes for it
+    
+    # Social gain of the legislative act
     acts$socialgain <- case_when(
       acts$passed == TRUE ~ acts$y,
       acts$passed == FALSE ~ 0
@@ -482,6 +501,7 @@ for (i in 1:length(independents_df$frac)) {
     final <- data.frame(sum(acts$passed)/n_acts, ifelse(sum(acts$passed) == 0, 0,(sum(acts$socialgain))/(sum(acts$passed))))
     names(final) <- c("acts passed", "average social gain")
     final$efficiency <- final$`acts passed` * final$`average social gain` * 100
+    final$indies <- fraction_ind
     
     tmp <- final
     dist <- rbind(dist, tmp)
@@ -491,17 +511,22 @@ for (i in 1:length(independents_df$frac)) {
   close(pb)
   Sys.sleep(1)
   
+  dist
   dist <- dist %>%
-    rownames_to_column(var="simulation")
-  dist$simulation <- as.numeric(dist$simulation)
+    rowid_to_column("simulation")
   
-  mean(dist$efficiency)
-  grid <- data.frame(fraction_ind, mean(dist$`acts passed`), mean(dist$`average social gain`), mean(dist$efficiency))
-  names(grid) <- c("independents_fraction","passed_pct", "social_gain", "efficiency")
+  totaldf <- rbind(totaldf, dist)
+  
+  lowerbound <- mean(dist$efficiency) - (sd(dist$efficiency)/sqrt(length(dist$efficiency))) * 1.96
+  upperbound <- mean(dist$efficiency) + (sd(dist$efficiency)/sqrt(length(dist$efficiency))) * 1.96
+  grid <- data.frame(fraction_ind, mean(dist$`acts passed`), mean(dist$`average social gain`), mean(dist$efficiency), lowerbound, upperbound)
+  names(grid) <- c("independents_fraction","passed_pct", "social_gain", "efficiency", "lower_bound", "upper_bound")
   finaldist <- rbind(finaldist, grid)
   print(finaldist)
 }
 
+# Graphics
+## Quantity of the legislation passed during an individual parliamentary term
 volume <- ggplot(dist, aes(x=simulation, y=`acts passed`, group=1))+
   geom_hline(yintercept = 0)+
   geom_point(alpha=0.5, colour="#d95f02", size=2)+
@@ -518,6 +543,7 @@ volume <- ggplot(dist, aes(x=simulation, y=`acts passed`, group=1))+
     legend.position = "none"
   )
 
+## Quality of the legislation passed during an individual parliamentary term
 socialgain <- ggplot(dist, aes(x=simulation, y=`average social gain`, group=1))+
   geom_hline(yintercept = 0)+
   geom_point(alpha=0.5, colour="#1b9e77", size=2)+
@@ -534,6 +560,7 @@ socialgain <- ggplot(dist, aes(x=simulation, y=`average social gain`, group=1))+
     legend.position = "none"
   )
 
+## Efficiency of the legislation passed during an individual parliamentary term
 efficiency <- ggplot(dist, aes(x=simulation, y=`efficiency`, group=1))+
   geom_hline(yintercept = 0)+
   geom_point(alpha=0.5, colour="#7570b3", size=2)+
@@ -550,16 +577,15 @@ efficiency <- ggplot(dist, aes(x=simulation, y=`efficiency`, group=1))+
     legend.position = "none"
   )
 
-#plot_grid(volume, socialgain, efficiency, ncol = 1)
-
+## Distribution of the efficiencies of the parliaments with a given fraction of independent legislators
 distplot <- ggplot(finaldist, aes(x=(independents_fraction*original_parliament), y = efficiency))+
   geom_hline(yintercept = 0)+
   geom_line()+
   geom_point()+
-  geom_text(aes(label = round(efficiency, 2)), nudge_y = 2)+
-  geom_text(label=paste0("Seed: ",seed), colour="red", hjust=0, size=6, aes(x=160, y=12))+
+  geom_errorbar(aes(ymin=lower_bound, ymax=upper_bound), width=2)+
+  geom_label(aes(label = round(efficiency, 2)))+
   labs(x="Number of independents")+
-  scale_y_continuous(limits=c(-5,15))+
+  scale_y_continuous(limits=c(-10,20))+
   scale_x_continuous(breaks=c(seq(0,200,20)))+
   theme_bw()+
   theme(
@@ -571,4 +597,8 @@ distplot <- ggplot(finaldist, aes(x=(independents_fraction*original_parliament),
   )
 
 distplot
-seed
+
+finaldist
+summary(aov(totaldf$efficiency ~ totaldf$indies)) # ANOVA of all parliamentary terms
+subs <- subset(totaldf, indies == 0.0 | indies == 0.2) # Subset of only parliament without sortition and 20% sortition
+summary(aov(subs$efficiency ~ subs$indies)) # ANOVA of the subset parliamentary terms
