@@ -8,6 +8,7 @@
 # The outermost loop aggregates the simulations with a given fraction of independents into a data frame,
 # and runs ten times, for each 0.1 increment of independent legislators.
 
+
 # Installing and loading libraries needed for the code
 # install.packages("tidyverse")
 # Sys.sleep(3)
@@ -583,14 +584,14 @@ distplot <- ggplot(finaldist, aes(x=(independents_fraction*original_parliament),
   geom_line()+
   geom_point()+
   geom_errorbar(aes(ymin=lower_bound, ymax=upper_bound), width=2)+
-  geom_label(aes(label = round(efficiency, 2)))+
+  geom_label(aes(label = round(efficiency, 2), y=upper_bound), nudge_y = 0.75, size=6)+
   labs(x="Number of independents")+
-  scale_y_continuous(limits=c(-10,20))+
+  scale_y_continuous(limits=c(-2,20))+
   scale_x_continuous(breaks=c(seq(0,200,20)))+
   theme_bw()+
   theme(
     panel.grid.minor.x = element_blank(),
-    text=element_text(size=20),
+    text=element_text(size=35),
     legend.box.margin = margin(20,20,20,20),
     plot.margin = margin(10,10,10,10),
     legend.position = "none"
