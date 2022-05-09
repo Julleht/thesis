@@ -1,1 +1,1 @@
-# R-code for <i>Accidental Politicians Pluralised</i>, Master's Thesis
+# R-code for the Master's Thesis <i>Accidental Politicians, Pluralised</i>
